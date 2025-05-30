@@ -1,9 +1,0 @@
-fastapi==0.115.11
-numpy==1.24.4
-tensorflow-cpu==2.10
-segmentation-models-tf==1.0.1
-azure-storage-blob
-matplotlib
-opencv-python
-python-multipart
-uvicorn
