@@ -1,7 +1,8 @@
-fastapi==0.115.11
+fastapi==0.115.1
 numpy==1.24.4
-tensorflow-cpu==2.10
-segmentation-models-tf>=0.9.2,<1.1
+tensorflow==2.10.0
+keras==2.10.0
+git+https://github.com/qubvel/segmentation_models.git
 azure-storage-blob
 matplotlib
 opencv-python
