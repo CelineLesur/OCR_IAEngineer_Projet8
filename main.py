@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import io
 import os
-import cv2
 from azure.storage.blob import BlobServiceClient
 from contextlib import asynccontextmanager
 from tensorflow.keras.applications import VGG16
@@ -178,7 +177,7 @@ async def root():
 
 @app.post("/predict")
 async def predict(image: UploadFile = File(...)):
-    
+    import cv2
 
     # Charger l'image
     image_bytes = await image.read()
