@@ -7,4 +7,5 @@ azure-storage-blob
 matplotlib
 opencv-python
 python-multipart
+cv2
 uvicorn
