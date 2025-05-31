@@ -19,7 +19,7 @@ import uvicorn
 AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=stockaccountp8;AccountKey=flae3B4NIMDm7xc1N3pmP84VgN+zqnM0+HsGw/Y+OqhfomqVLftO9jy4J5r2aIn+eccsB1G8A147+AStRvQ6TA==;EndpointSuffix=core.windows.net"
 CONTAINER_NAME = "containerp8"
 BLOB_NAME = "unet_vgg16_epoch50_model.weights.h5"
-LOCAL_WEIGHTS_PATH = "C:/tutorial-env/OCR/Projet8/APImodel/APImodel.weights.h5"
+LOCAL_WEIGHTS_PATH = "/tmp/APImodel.weights.h5"
 
 
 id_to_color = {
@@ -49,8 +49,12 @@ def download_blob():
     blob_client = container_client.get_blob_client(BLOB_NAME)
 
     with open(LOCAL_WEIGHTS_PATH, "wb") as f:
-        data = blob_client.download_blob()
-        data.readinto(f)
+        blob_data = blob_client.download_blob()
+        f.write(blob_data.readall())
+    
+    # with open(LOCAL_WEIGHTS_PATH, "wb") as f:
+    #     data = blob_client.download_blob()
+    #     data.readinto(f)
     print(">> Taille du fichier de poids téléchargé :", os.path.getsize(LOCAL_WEIGHTS_PATH), "octets")
     print("Poids téléchargés et sauvegardés localement.")
 
