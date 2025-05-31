@@ -7,4 +7,4 @@ azure-storage-blob
 matplotlib
 opencv-python-headless==4.5.5.64
 python-multipart
-uvicorn
+uvicorn[standard]
