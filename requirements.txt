@@ -5,7 +5,6 @@ keras==2.10.0
 git+https://github.com/qubvel/segmentation_models.git
 azure-storage-blob
 matplotlib
-opencv-python
+opencv-python-headless==4.5.5.64
 python-multipart
-cv2
 uvicorn
