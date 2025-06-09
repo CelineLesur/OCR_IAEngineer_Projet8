@@ -14,6 +14,7 @@ from tensorflow.keras.optimizers import Adam, SGD
 import segmentation_models as sm
 import tensorflow as tf
 import uvicorn
+import tempfile
 
 # Paramètres de connexion blob storage
 AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=stockaccountp8;AccountKey=flae3B4NIMDm7xc1N3pmP84VgN+zqnM0+HsGw/Y+OqhfomqVLftO9jy4J5r2aIn+eccsB1G8A147+AStRvQ6TA==;EndpointSuffix=core.windows.net"
@@ -212,12 +213,19 @@ async def predict(image: UploadFile = File(...)):
     labels = [str(cls_id) for cls_id in id_to_color.keys()]
     ax.legend(handles, labels, title="Classes", loc="lower left")
 
-    # Sauvegarder et retourner
-    result_path = "prediction_overlay.png"
-    plt.savefig(result_path, bbox_inches="tight")
+    # # Sauvegarder et retourner
+    # result_path = "prediction_overlay.png"
+    # plt.savefig(result_path, bbox_inches="tight")
+    # plt.close()
+
+    # Sauvegarde dans un fichier temporaire pour le deploiement
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+        plt.savefig(tmp_file.name, bbox_inches="tight")
+        tmp_path = tmp_file.name
+
     plt.close()
 
-    return FileResponse(result_path, media_type="image/png")
+    return FileResponse(tmp_path, media_type="image/png", filename="segmentation.png")
 
 
 
