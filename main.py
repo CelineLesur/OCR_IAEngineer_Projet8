@@ -18,30 +18,21 @@ import tempfile
 
 # Paramètres de connexion blob storage
 AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=stockaccountp8;AccountKey=flae3B4NIMDm7xc1N3pmP84VgN+zqnM0+HsGw/Y+OqhfomqVLftO9jy4J5r2aIn+eccsB1G8A147+AStRvQ6TA==;EndpointSuffix=core.windows.net"
-CONTAINER_NAME = "containerp8"
+CONTAINER_NAME = "projet8"
 BLOB_NAME = "unet_vgg16_aug_epoch50_model.weights.h5"
-LOCAL_WEIGHTS_PATH = "/tmp/APImodel.weights.h5"
+LOCAL_WEIGHTS_PATH = "C:/tutorial-env/OCR/Projet8/APImodel/APImodel.weights.h5"
 
 
 id_to_color = {
-    0: (0, 0, 0),         # background - noir
-    1: (255, 0, 0),       # road - rouge vif
-    2: (0, 255, 0),       # sidewalk - vert vif
-    3: (0, 0, 255),       # building - bleu vif
-    4: (255, 255, 0),     # wall - jaune
-    5: (255, 0, 255),     # fence - magenta
-    6: (0, 255, 255),     # pole - cyan
-    7: (255, 165, 0),     # traffic light - orange
-}
-#  0: (0, 0, 0),         # void - noir
-#         1: (128, 64, 128),    # flat - violet
-#         2: (70, 70, 70),      # construction - gris
-#         3: (255, 0, 0),       # object - rouge
-#         4: (0, 128, 0),       # nature - vert
-#         5: (70, 130, 180),    # sky - bleu ciel
-#         6: (220, 20, 60),     # human - rose
-#         7: (0, 0, 142),       # vehicle - bleu foncé
-# «vide», «route/trottoir», «construction», «objet», «nature» «ciel», «humain» et «véhicule»
+    0: (0, 0, 0),         # void - noir
+    1: (128, 64, 128),    # flat - violet
+    2: (70, 70, 70),      # construction - gris
+    3: (255, 0, 0),       # object - rouge
+    4: (0, 128, 0),       # nature - vert
+    5: (70, 130, 180),    # sky - bleu ciel
+    6: (220, 20, 60),     # human - rose
+    7: (0, 0, 142),       # vehicle - bleu foncé
+    }
 
 def download_blob():
     print("Téléchargement des poids depuis Azure Blob Storage...")
@@ -67,83 +58,44 @@ def decode_mask(mask_2d):
         mask_rgb[mask_2d == class_id] = color
     return mask_rgb
 
+def preprocess_image(image_bytes: bytes) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Charge et prétraite une image à partir de bytes pour le modèle.
+    """
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image_np = np.array(image)
+    resized_img = cv2.resize(image_np, (224, 224))
+    preprocessed_img = preprocess_input(resized_img)
+    return resized_img, np.expand_dims(preprocessed_img, axis=0)
+    
 def build_unet(backbone=None, input_shape=(224, 224, 3), num_classes=8, filters=[32, 64],
                dropout_rate=0.0, optimizer='adam', learning_rate=1e-3, loss='dice'):
 
-    if backbone == 'vgg16':
-        vgg = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
-        vgg.trainable = False
+    vgg = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
+    vgg.trainable = False
 
-        inputs = vgg.input
-        skips = [
-            vgg.get_layer("block1_conv2").output,
-            vgg.get_layer("block2_conv2").output,
-            vgg.get_layer("block3_conv3").output,
-            vgg.get_layer("block4_conv3").output
-        ]
-        x = vgg.get_layer("block5_conv3").output
+    inputs = vgg.input
+    skips = [
+        vgg.get_layer("block1_conv2").output,
+        vgg.get_layer("block2_conv2").output,
+        vgg.get_layer("block3_conv3").output,
+        vgg.get_layer("block4_conv3").output
+    ]
+    x = vgg.get_layer("block5_conv3").output
 
-        for i, skip in reversed(list(enumerate(skips))):
-            x = layers.UpSampling2D((2, 2))(x)
-            x = layers.Concatenate()([x, skip])
-            x = layers.Conv2D(512 // (2**i), 3, activation='relu', padding='same')(x)
-            x = layers.Conv2D(512 // (2**i), 3, activation='relu', padding='same')(x)
-            if dropout_rate > 0.0:
-                x = layers.Dropout(dropout_rate)(x)
+    for i, skip in reversed(list(enumerate(skips))):
+        x = layers.UpSampling2D((2, 2))(x)
+        x = layers.Concatenate()([x, skip])
+        x = layers.Conv2D(512 // (2**i), 3, activation='relu', padding='same')(x)
+        x = layers.Conv2D(512 // (2**i), 3, activation='relu', padding='same')(x)
+        if dropout_rate > 0.0:
+            x = layers.Dropout(dropout_rate)(x)
 
-        outputs = layers.Conv2D(num_classes, (1, 1), activation='softmax')(x)
-        base_model = models.Model(inputs, outputs)
+    outputs = layers.Conv2D(num_classes, (1, 1), activation='softmax')(x)
+    base_model = models.Model(inputs, outputs)
 
-    elif backbone:
-        base_model = sm.Unet(
-            backbone_name=backbone,
-            input_shape=input_shape,
-            classes=num_classes,
-            activation='softmax',
-            encoder_weights='imagenet'
-        )
-
-    else:
-        inputs = tf.keras.Input(shape=input_shape, name='image_input')
-        skips = []
-        x = inputs
-        for f in filters:
-            x = layers.Conv2D(f, 3, activation='relu', padding='same')(x)
-            x = layers.Conv2D(f, 3, activation='relu', padding='same')(x)
-            skips.append(x)
-            x = layers.MaxPooling2D((2, 2))(x)
-            if dropout_rate > 0.0:
-                x = layers.Dropout(dropout_rate)(x)
-
-        x = layers.Conv2D(filters[-1]*2, 3, activation='relu', padding='same')(x)
-        x = layers.Conv2D(filters[-1]*2, 3, activation='relu', padding='same')(x)
-
-        for i in reversed(range(len(filters))):
-            x = layers.UpSampling2D((2, 2))(x)
-            x = layers.Concatenate()([x, skips[i]])
-            x = layers.Conv2D(filters[i], 3, activation='relu', padding='same')(x)
-            x = layers.Conv2D(filters[i], 3, activation='relu', padding='same')(x)
-
-        outputs = layers.Conv2D(num_classes, (1, 1), activation='softmax')(x)
-        base_model = models.Model(inputs=inputs, outputs=outputs)
-
-    if loss == 'dice':
-        loss_fn = sm.losses.DiceLoss()
-    elif loss == 'ce':
-        loss_fn = 'categorical_crossentropy'
-    elif loss == 'focal':
-        loss_fn = sm.losses.CategoricalFocalLoss()
-    elif loss == 'focal_dice':
-        loss_fn = sm.losses.categorical_focal_dice_loss
-    else:
-        raise ValueError("Loss inconnue")
-
-    if optimizer == 'adam':
-        opt = Adam(learning_rate=learning_rate)
-    elif optimizer == 'sgd':
-        opt = SGD(learning_rate=learning_rate, momentum=0.9)
-    else:
-        raise ValueError("Optimiseur non reconnu")
+    loss_fn = sm.losses.categorical_focal_dice_loss
+    opt = Adam(learning_rate=learning_rate)
 
     base_model.compile(optimizer=opt, loss=loss_fn,
                        metrics=[sm.metrics.IOUScore(threshold=0.5), 'accuracy'])
@@ -182,14 +134,8 @@ async def root():
 
 @app.post("/predict")
 async def predict(image: UploadFile = File(...)):
-    import cv2
 
-    # Charger l'image
-    image_bytes = await image.read()
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    img_resized = img.resize((224, 224))
-    img_np = np.array(img_resized) / 255.0  # Normaliser
-    input_tensor = np.expand_dims(img_np, axis=0)  # (1, 224, 224, 3)
+    original_img, input_tensor = preprocess_image(await image.read())
 
     # Prédiction
     prediction = app.state.model.predict(input_tensor)
@@ -198,9 +144,8 @@ async def predict(image: UploadFile = File(...)):
     # Masque coloré
     color_mask = decode_mask(pred_mask)
 
-    # Superposition (on redimensionne à l'image d'origine si besoin)
-    color_mask_resized = cv2.resize(color_mask, img.size, interpolation=cv2.INTER_NEAREST)
-    overlay = cv2.addWeighted(np.array(img), 0.3, color_mask_resized, 0.7, 0)
+    # Superposition
+    overlay = (0.3 * original_img + 0.7 * color_mask).clip(0, 255).astype(np.uint8)
 
     # Création de la figure avec légende
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -213,19 +158,12 @@ async def predict(image: UploadFile = File(...)):
     labels = [str(cls_id) for cls_id in id_to_color.keys()]
     ax.legend(handles, labels, title="Classes", loc="lower left")
 
-    # # Sauvegarder et retourner
-    # result_path = "prediction_overlay.png"
-    # plt.savefig(result_path, bbox_inches="tight")
-    # plt.close()
-
-    # Sauvegarde dans un fichier temporaire pour le deploiement
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
-        plt.savefig(tmp_file.name, bbox_inches="tight")
-        tmp_path = tmp_file.name
-
+    # Sauvegarder et retourner
+    result_path = "prediction_overlay.png"
+    plt.savefig(result_path, bbox_inches="tight")
     plt.close()
 
-    return FileResponse(tmp_path, media_type="image/png", filename="segmentation.png")
+    return FileResponse(result_path, media_type="image/png")
 
 
 
