@@ -34,6 +34,9 @@ id_to_color = {
     }
 
 def download_blob():
+    # Crée le dossier si nécessaire
+    os.makedirs(os.path.dirname(LOCAL_WEIGHTS_PATH), exist_ok=True)
+    
     print("Téléchargement des poids depuis Azure Blob Storage...")
     blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
     container_client = blob_service_client.get_container_client(CONTAINER_NAME)
