@@ -20,8 +20,7 @@ import tempfile
 AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=stockaccountp8;AccountKey=flae3B4NIMDm7xc1N3pmP84VgN+zqnM0+HsGw/Y+OqhfomqVLftO9jy4J5r2aIn+eccsB1G8A147+AStRvQ6TA==;EndpointSuffix=core.windows.net"
 CONTAINER_NAME = "projet8"
 BLOB_NAME = "unet_vgg16_aug_epoch50_model.weights.h5"
-LOCAL_WEIGHTS_PATH = "C:/tutorial-env/OCR/Projet8/APImodel/APImodel.weights.h5"
-
+LOCAL_WEIGHTS_PATH = os.path.join("APImodel", "APImodel.weights.h5")
 
 id_to_color = {
     0: (0, 0, 0),         # void - noir
