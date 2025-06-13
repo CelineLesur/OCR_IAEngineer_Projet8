@@ -5,14 +5,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import io
-import os
+import cv2
 from azure.storage.blob import BlobServiceClient
 from contextlib import asynccontextmanager
 from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
 from tensorflow.keras import layers, models
 from tensorflow.keras.optimizers import Adam, SGD
 import segmentation_models as sm
-import tensorflow as tf
 import uvicorn
 import tempfile
 
